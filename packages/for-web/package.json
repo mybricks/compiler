@@ -1,0 +1,21 @@
+{
+  "name": "@mybricks/compiler-for-web",
+  "version": "0.0.1",
+  "main": "main.js",
+  "scripts": {
+    "test": "jest",
+    "build": "webpack --config build/webpack.build.js -p",
+    "build-all": "webpack --config build/webpack.build-all.js -p",
+    "build-bundle": "webpack --config build/webpack.build-bundle.js -p",
+    "dev": "webpack-dev-server --config build/webpack.dev.js",
+    "watch-all": "webpack-dev-server --config build/webpack.watch-all.js",
+    "xg": "webpack-dev-server --config build/webpack.xg.js"
+  },
+  "author": "CheMingjun",
+  "license": "",
+  "dependencies": {
+    "@mybricks/rxui": "1.0.71"
+  },
+  "devDependencies": {
+  }
+}
