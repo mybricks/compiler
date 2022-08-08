@@ -10,7 +10,7 @@ export default function RenderCom({
                                     createPortal,
                                     slotIo,
                                     rtMaps
-                                  }: { node: {}, comDefs, env, runtimeCfg, logger, createPortal:any, slotIo: any, rtMaps: {} }) {
+                                  }: { node: {}, comDefs, env, runtimeCfg, logger, createPortal: any, slotIo: any, rtMaps: {} }) {
   const {slots: comSlots, parent, def, id, model, title} = node
 
   const myKey = `${def.namespace + '@' + def.version} (id=${id})`
@@ -30,19 +30,7 @@ export default function RenderCom({
 
   const comDefsKey = def.namespace + '@' + def.version
 
-  const comRuntime = comDefs[comDefsKey]
-  const rt = rtMaps[id]
-
-  const {inputs, outputs, fork} = rt.io
-
-  let nInputs = inputs, nOutputs = outputs
-  // 当slot有io时，rt.io里merge slotIo的输入输出，参考designer的debugrunner里render代码
-  if (inputs && slotIo?.inputs) {
-    nInputs = fork('inputs', slotIo.inputs)
-  }
-  if (outputs && slotIo?.outputs) {
-    nOutputs = fork('outputs', slotIo.outputs)
-  }
+  const comDef = comDefs[comDefsKey]
 
   const slots = {}
   if (comSlots) {
@@ -52,20 +40,49 @@ export default function RenderCom({
         title: slot.title,
         //comAry:slot.comAry,
         render(...args) {
+          const {frames} = rtMaps[id]
+          const fn = frames[slot.id]
+          if (typeof fn === 'function') {
+            fn()//invoke frame.exe
+          }
+
           const comAry = slot.comAry || []
-          return (
-            <section className={calSlotStyle(slot)} style={{overflow: 'hidden'}}>
-              {
-                comAry.map(com => {
-                    return (
-                      <RenderCom slotIo={args[0]} key={com.id} node={com} comDefs={comDefs} env={env}
-                                 runtimeCfg={runtimeCfg} logger={logger} createPortal={createPortal} rtMaps={rtMaps}/>
-                    )
-                  }
-                )
+
+          const arg0 = args[0]
+          let jsx
+          if (typeof arg0 === 'object' && typeof arg0.wrap === 'function') {
+            const ary = comAry.map(com => {
+                const {io} = rtMaps[com.id]
+                return {
+                  id: com.id,
+                  jsx: (
+                    <RenderCom slotIo={args[0]} key={com.id} node={com} comDefs={comDefs} env={env}
+                               runtimeCfg={runtimeCfg} logger={logger} createPortal={createPortal} rtMaps={rtMaps}/>
+                  ),
+                  inputs: io.inputsCallable,
+                  _inputs: io._inputsCallable
+                }
               }
-            </section>
-          )
+            )
+
+            jsx = arg0.wrap(ary)
+          } else {
+            jsx = (
+              <section className={calSlotStyle(slot)} style={{overflow: 'hidden'}}>
+                {
+                  comAry.map(com => {
+                      return (
+                        <RenderCom slotIo={args[0]} key={com.id} node={com} comDefs={comDefs} env={env}
+                                   runtimeCfg={runtimeCfg} logger={logger} createPortal={createPortal} rtMaps={rtMaps}/>
+                      )
+                    }
+                  )
+                }
+              </section>
+            )
+          }
+
+          return jsx
         },
         get size() {
           return slot.comAry?.length || 0
@@ -120,6 +137,19 @@ export default function RenderCom({
   const sizeStyle = getSizeStyle({style})
   const marginStyle = getMarginStyle({style})
 
+  const rt = rtMaps[id]///////TODO 编辑无法聚焦区域、dev-pub的bug
+
+  const {inputs, inputsCallable, _inputs, _inputsCallable, outputs, fork} = rt.io
+
+  let nInputs = inputs, nOutputs = outputs
+  // 当slot有io时，rt.io里merge slotIo的输入输出，参考designer的debugrunner里render代码
+  if (inputs && slotIo?.inputs) {
+    nInputs = fork('inputs', slotIo.inputs)
+  }
+  if (outputs && slotIo?.outputs) {
+    nOutputs = fork('outputs', slotIo.outputs)
+  }
+
   return (
     <div id={id} style={{
       display: style.display,
@@ -135,13 +165,14 @@ export default function RenderCom({
       ...(style.ext || {})
     }} className={classes}>
       {
-        comRuntime({
+        comDef.runtime({
           slots: slots,
           env: nenv,
           data: nodeModel.data,
           title,
           style,
           inputs: nInputs,
+          _inputs,
           outputs: nOutputs,
           logger: logger(node),
           createPortal

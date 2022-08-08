@@ -2,12 +2,16 @@
 
 export function parse(pageData) {
   const refs = pageData.refs
-  const slot = getRef(refs, pageData.slot)
+  const slots = getRef(refs, pageData.slots)
   const frame = getRef(refs, pageData.frame)
+
+  const connectors = pageData.connectors
+  const pluginDataset = pageData.pluginDataset
+
   const requireComs: string[] = []
-  
+
   function parseFrame(frame) {
-    const { comAry, model, def, parent } = frame
+    const {comAry, model, def, parent} = frame
 
     PIN_KEYS.forEach(key => {
       const pins = frame[key]
@@ -20,25 +24,25 @@ export function parse(pageData) {
             if (Array.isArray(realPin.conAry)) {
               realPin.conAry.forEach((con, idx) => {
                 const realCon = getRef(refs, con)
-    
+
                 if (!realCon && !con.id) {
                   delete realPin.conAry[idx]
                 }
-    
+
                 if (!realCon) return
-    
-                const { finishPin, startPin } = realCon
+
+                const {finishPin, startPin} = realCon
                 const realFinishPin = getRef(refs, finishPin)
                 const realStartPin = getRef(refs, startPin)
-    
+
                 if (realFinishPin) {
                   realCon.finishPin = realFinishPin
                 }
-    
+
                 if (realStartPin) {
                   realCon.startPin = realStartPin
                 }
-    
+
                 realPin.conAry[idx] = realCon
               })
 
@@ -74,7 +78,7 @@ export function parse(pageData) {
 
     if (def) {
       const key = def.namespace + '@' + def.version
-  
+
       if (requireComs.indexOf(key) <= 0) {
         requireComs.push(key)
       }
@@ -91,37 +95,37 @@ export function parse(pageData) {
     if (Array.isArray(comAry)) {
       comAry.forEach((com, idx) => {
         const realCom = getRef(refs, com) || com
-  
+
         parseFrame(realCom)
-  
+
         comAry[idx] = realCom
       })
     }
   }
-  
+
   function parseSlot(slot) {
-    const { comAry } = slot
+    const {comAry} = slot
 
     if (Array.isArray(comAry)) {
       comAry.forEach((com, idx) => {
         const realCom = getRef(refs, com)
-        
+
         if (!realCom) return
-  
-        const { model, parent, slots } = realCom
-  
+
+        const {model, parent, slots} = realCom
+
         const realModel = getRef(refs, model)
-  
+
         if (realModel) {
           com = realCom
-  
+
           if (getRef(refs, realCom.model)) {
             realCom.model = getRef(refs, realCom.model)
           }
         }
-  
+
         const realParent = getRef(refs, parent)
-  
+
         if (realParent) {
           com.parent = realParent
         }
@@ -129,24 +133,39 @@ export function parse(pageData) {
         if (Array.isArray(slots)) {
           slots.forEach((slot, idx) => {
             const realSlot = getRef(refs, slot)
-    
+
             if (realSlot) {
-              
               parseSlot(realSlot)
               slots[idx] = realSlot
             }
           })
         }
-  
+
         comAry[idx] = com
       })
     }
   }
 
-  parseFrame(frame)
-  parseSlot(slot)
+  function parseSlots(rslots) {
+    const {slots} = rslots
 
-  return {mainModule: {frame, slot}, requireComs}
+    if (Array.isArray(slots)) {
+      slots.forEach((slot, idx) => {
+        const realSlot = getRef(refs, slot)
+
+        if (realSlot) {
+          parseSlot(realSlot)
+          slots[idx] = realSlot
+        }
+      })
+    }
+  }
+
+  parseFrame(frame)
+
+  parseSlots(slots)
+
+  return {mainModule: {frame, slots, pluginDataset, connectors}, requireComs}
 }
 
 function getRef(refs, obj) {

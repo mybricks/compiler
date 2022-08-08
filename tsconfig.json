@@ -29,6 +29,9 @@
       "@mybricks/compiler-js": [
         "../compiler-js/src/index"
       ],
+      "@mybricks/comlib-core-runtime": [
+        "../_comlibs/comlib-core/src/runtime"
+      ],
       "@mybricks/compiler-web": [
         "./index.ts"
       ]
